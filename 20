@@ -1,0 +1,89 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <time.h>
+#define MAX_PROCESSES 10
+#define IO_WAIT_TIME 2
+typedef struct {
+    int id;
+    int arrivalTime;
+    int burstTime;
+    int priority;
+    int waitingTime;
+    int turnaroundTime;
+    int completionTime;
+    bool isCompleted;
+} Process;
+void calculateTimes(Process processes[], int n) {
+    int currentTime = 0;
+    int completed = 0;
+    int totalWaitingTime = 0;
+    int totalTurnaroundTime = 0;
+    while (completed < n) {
+        int highestPriorityIndex = -1;
+        int highestPriority = __INT_MAX__;
+        for (int i = 0; i < n; i++) {
+            if (!processes[i].isCompleted && processes[i].arrivalTime <= currentTime) {
+                if (processes[i].priority < highestPriority || 
+                   (processes[i].priority == highestPriority && processes[i].arrivalTime < processes[highestPriorityIndex].arrivalTime)) {
+                    highestPriority = processes[i].priority;
+                    highestPriorityIndex = i;
+                }
+            }
+        }
+        if (highestPriorityIndex == -1) {
+            currentTime++;
+            continue;
+        }
+        processes[highestPriorityIndex].completionTime = currentTime + processes[highestPriorityIndex].burstTime;
+        processes[highestPriorityIndex].turnaroundTime = processes[highestPriorityIndex].completionTime - processes[highestPriorityIndex].arrivalTime;
+        processes[highestPriorityIndex].waitingTime = processes[highestPriorityIndex].turnaroundTime - processes[highestPriorityIndex].burstTime;
+        totalWaitingTime += processes[highestPriorityIndex].waitingTime;
+        totalTurnaroundTime += processes[highestPriorityIndex].turnaroundTime;
+        currentTime = processes[highestPriorityIndex].completionTime + IO_WAIT_TIME;
+        processes[highestPriorityIndex].isCompleted = true;
+        completed++;
+    }
+    printf("\nAverage Waiting Time: %.2f\n", (float)totalWaitingTime / n);
+    printf("Average Turnaround Time: %.2f\n", (float)totalTurnaroundTime / n);
+}
+void printGanttChart(Process processes[], int n) {
+    printf("\nGantt Chart:\n");
+    printf(" |");
+    for (int i = 0; i < n; i++) {
+        printf(" P%d |", processes[i].id);
+    }
+    printf("\n");
+    printf("0");
+    for (int i = 0; i < n; i++) {
+        printf("   %d", processes[i].completionTime);
+    }
+    printf("\n");
+}
+int main() {
+    int n;
+    Process processes[MAX_PROCESSES];
+    srand(time(NULL));
+    printf("Enter the number of processes (max %d): ", MAX_PROCESSES);
+    scanf("%d", &n);
+    if (n > MAX_PROCESSES) {
+        printf("Error: Maximum number of processes exceeded.\n");
+        return 1;
+    }
+    for (int i = 0; i < n; i++) {
+        processes[i].id = i + 1;
+        processes[i].isCompleted = false;
+        printf("Enter arrival time, CPU burst, and priority for Process P%d: ", i + 1);
+        scanf("%d %d %d", &processes[i].arrivalTime, &processes[i].burstTime, &processes[i].priority);
+    }
+    calculateTimes(processes, n);
+    printGanttChart(processes, n);
+    printf("\nProcess Details:\n");
+    printf("ID\tArrival\tBurst\tPriority\tWaiting\tTurnaround\tCompletion\n");
+    for (int i = 0; i < n; i++) {
+        printf("%d\t%d\t%d\t%d\t\t%d\t%d\t\t%d\n", processes[i].id, processes[i].arrivalTime,
+               processes[i].burstTime, processes[i].priority, processes[i].waitingTime,
+               processes[i].turnaroundTime, processes[i].completionTime);
+    }
+    return 0;
+}
